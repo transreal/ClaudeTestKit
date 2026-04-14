@@ -1,0 +1,13 @@
+{
+	"packageName":"ClaudeTestKit",
+	"files":[
+		"ClaudeTestKit.wl"
+	],
+	"directories":[
+		"ClaudeTestKit_info"
+	],
+	"excludePatterns":[
+		"ClaudeTestKit_info\/history\/",
+		"ClaudeTestKit_info\/references\/"
+	]
+}
