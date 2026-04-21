@@ -2,7 +2,7 @@
 
 ## 概要
 
-ClaudeTestKit は、ClaudeRuntime のランタイム・セキュリティカーネルをテストするための装置パッケージです。Mock Provider / Mock Adapter によるシミュレーション環境を提供し、シナリオ定義・実行・検証を一貫したインターフェースで行えます。
+ClaudeTestKit は、ClaudeRuntime および ClaudeOrchestrator のランタイム・セキュリティカーネルをテストするための装置パッケージです。Mock Provider / Mock Adapter によるシミュレーション環境を提供し、シナリオ定義・実行・検証を一貫したインターフェースで行えます。
 
 本マニュアルでは各パブリック関数の使い方を機能カテゴリ別に説明します。インストール方法は `setup.md` を参照してください。
 
@@ -316,6 +316,397 @@ AssertEventSequence[
 
 ---
 
+## ClaudeOrchestrator 連携テスト
+
+[ClaudeOrchestrator](https://github.com/transreal/ClaudeOrchestrator) は、複数の worker agent が分担してタスクを処理し、Reducer が成果物をまとめて Committer が最終的にノートブックへ書き込む、マルチエージェント実行フレームワークです。ClaudeTestKit はこのオーケストレーションフローを Mock 環境でテストするための関数群を提供します（spec §13 対応）。
+
+### アーキテクチャ概要
+
+ClaudeOrchestrator のテストでは以下のコンポーネントをそれぞれ Mock に置き換えます。
+
+| コンポーネント      | Mock 関数                    | 役割                                   |
+|--------------------|------------------------------|----------------------------------------|
+| Planner            | `CreateMockPlanner`          | タスク分解仕様を固定値で返す           |
+| Worker Adapter     | `CreateMockWorkerAdapter`    | 各 worker の応答・proposal を制御する  |
+| Reducer            | `CreateMockReducer`          | artifact 統合結果を固定値で返す        |
+| Committer Adapter  | `CreateMockCommitter`        | ノートブック書き込みを安全にスタブ化する |
+| Query 関数         | `CreateMockQueryFunction`    | LLM 呼び出しを固定 JSON 応答で代替する |
+
+---
+
+### `CreateMockPlanner`
+
+固定の taskSpec を返す mock planner を作成します。
+
+**シグネチャ**
+```
+CreateMockPlanner[taskSpec_Association]
+```
+
+- `taskSpec` — `"Tasks"` キーを持つ Association。各タスクは `"TaskId"`・`"Goal"`・`"OutputSchema"`・`"DependsOn"` 等のキーを持ちます。
+
+**例**
+```wolfram
+planner = CreateMockPlanner[<|
+  "Tasks" -> {
+    <|"TaskId" -> "t1", "Role" -> "Explore", "Goal" -> "構造を調べる",
+      "OutputSchema" -> {"Summary"}, "DependsOn" -> {}|>,
+    <|"TaskId" -> "t2", "Role" -> "Draft",  "Goal" -> "内容を書く",
+      "OutputSchema" -> {"Body"},    "DependsOn" -> {"t1"}|>
+  }
+|>];
+```
+
+---
+
+### `CreateMockWorkerAdapter`
+
+役割・タスク・依存 artifact を受け取り、固定応答を返す mock worker adapter を作成します。
+
+**シグネチャ**
+```
+CreateMockWorkerAdapter[role, task, depArtifacts, opts___Rule]
+```
+
+| オプション          | 説明                                                    |
+|--------------------|---------------------------------------------------------|
+| `"Response"`       | worker の固定応答（文字列または Association）           |
+| `"ProposedHeld"`   | `HoldComplete[...]` で proposal を強制指定              |
+| `"ArtifactPayload"`| 抽出される artifact payload（Association）              |
+
+**例**
+```wolfram
+workerAdapter = CreateMockWorkerAdapter[
+  "Explore", task, {},
+  "ArtifactPayload" -> <|"Summary" -> "ノートブックには 3 つのセクションがある"|>
+];
+```
+
+---
+
+### `CreateMockReducer`
+
+artifact リストを無視して固定 payload を返す mock reducer を作成します。
+
+**シグネチャ**
+```
+CreateMockReducer[payload_Association]
+```
+
+**例**
+```wolfram
+reducer = CreateMockReducer[<|
+  "Body" -> "統合されたコンテンツ",
+  "Slides" -> {<|"Title" -> "まとめ", "Body" -> "...|>"}
+|>];
+```
+
+---
+
+### `CreateMockCommitter`
+
+ノートブックへの実ファイル書き込みを行わず、Metadata にコミット記録のみを残す mock committer adapter を作成します。
+
+**シグネチャ**
+```
+CreateMockCommitter[targetNotebook, reducedArtifact]
+```
+
+- `targetNotebook` — 書き込み先ノートブックオブジェクト（またはそのスタブ）
+- `reducedArtifact` — Reducer が生成した統合 artifact
+
+**例**
+```wolfram
+committer = CreateMockCommitter[mockNb, reducedArtifact];
+```
+
+---
+
+### `CreateMockQueryFunction`
+
+固定 JSON 応答を順番に返す mock query 関数を作成します。LLM planner / worker のテスト用です。
+
+**シグネチャ**
+```
+CreateMockQueryFunction[responses_List]
+```
+
+- `responses` — JSON 文字列のリスト。順番に返され、使い切ると最後の応答を繰り返します。
+
+**例**
+```wolfram
+queryFn = CreateMockQueryFunction[{
+  "{\"Tasks\": [{\"TaskId\": \"t1\", \"Goal\": \"調査する\"}]}",
+  "{\"Summary\": \"調査完了\"}"
+}];
+```
+
+---
+
+### `RunClaudeOrchestrationScenario`
+
+ClaudeOrchestrator のオーケストレーションフロー全体をシナリオとして実行し、結果を返します。
+
+**シグネチャ**
+```
+RunClaudeOrchestrationScenario[scenario_Association]
+```
+
+シナリオのキー：
+
+| キー                      | 説明                                                      |
+|--------------------------|-----------------------------------------------------------|
+| `"Planner"`              | `CreateMockPlanner` の返り値                              |
+| `"WorkerAdapterBuilder"` | `(role, task, depArtifacts) -> adapter` の関数            |
+| `"Reducer"`              | `CreateMockReducer` の返り値                              |
+| `"CommitterAdapterBuilder"` | `(nb, artifact) -> adapter` の関数                    |
+| `"Input"`                | ユーザー入力テキスト                                      |
+| `"TargetNotebook"`       | 書き込み先ノートブック（スタブ可）                        |
+| `"Assertions"`           | 実行後に評価するアサーション関数のリスト                  |
+
+**例**
+```wolfram
+result = RunClaudeOrchestrationScenario[<|
+  "Planner"              -> planner,
+  "WorkerAdapterBuilder" -> Function[{role, task, deps},
+    CreateMockWorkerAdapter[role, task, deps,
+      "ArtifactPayload" -> <|"Body" -> "生成コンテンツ"|>]],
+  "Reducer"              -> reducer,
+  "CommitterAdapterBuilder" -> Function[{nb, art}, CreateMockCommitter[nb, art]],
+  "Input"                -> "レポートを作成してください",
+  "TargetNotebook"       -> mockNb,
+  "Assertions"           -> {
+    AssertNoWorkerNotebookMutation[#] &,
+    AssertSingleCommitterWrites[#] &
+  }
+|>];
+```
+
+---
+
+## ClaudeOrchestrator 用アサーション関数
+
+---
+
+### `AssertNoWorkerNotebookMutation`
+
+オーケストレーション結果の中で、いずれの worker も `NotebookWrite` / `CreateNotebook` を実行していないことを検証します。ノートブック書き込みは committer のみが行うという原則を守るためのアサーションです。
+
+**シグネチャ**
+```
+AssertNoWorkerNotebookMutation[orchestrationResult_Association]
+```
+
+**例**
+```wolfram
+AssertNoWorkerNotebookMutation[result]
+(* True — worker がノートブックを直接変更していない場合 *)
+```
+
+---
+
+### `AssertArtifactsRespectDependencies`
+
+`DependsOn` で指定された先行 artifact が、依存する artifact より先に生成されていることを検証します。
+
+**シグネチャ**
+```
+AssertArtifactsRespectDependencies[orchestrationResult_Association, tasksSpec_Association]
+```
+
+**例**
+```wolfram
+AssertArtifactsRespectDependencies[result, taskSpec]
+(* True — t1 の artifact が t2 より先に生成されている場合 *)
+```
+
+---
+
+### `AssertSingleCommitterWrites`
+
+ノートブック書き込み proposal が committer runtime のみから提案されていることを検証します。
+
+**シグネチャ**
+```
+AssertSingleCommitterWrites[orchestrationResult_Association]
+```
+
+**例**
+```wolfram
+AssertSingleCommitterWrites[result]
+(* True — 書き込み proposal が committer 由来のみの場合 *)
+```
+
+---
+
+### `AssertReducerDeterministic`
+
+同じ artifacts リストに対して reducer が複数回同じ結果を返すことを検証します。
+
+**シグネチャ**
+```
+AssertReducerDeterministic[reducer, artifacts_List]
+```
+
+**例**
+```wolfram
+AssertReducerDeterministic[reducer, {artifact1, artifact2}]
+(* True — 複数回呼び出して同一結果の場合 *)
+```
+
+---
+
+### `AssertNoCrossWorkerStateAssumption`
+
+worker の proposal 群の中に、他の worker の Mathematica 変数を参照する兆候がないことを検証します。worker 間のステート共有はアーキテクチャ違反であるため、このアサーションで検出します。
+
+**シグネチャ**
+```
+AssertNoCrossWorkerStateAssumption[orchestrationResult_Association]
+```
+
+**例**
+```wolfram
+AssertNoCrossWorkerStateAssumption[result]
+(* True — セッション変数的な参照が検出されない場合 *)
+```
+
+---
+
+### `AssertTaskOutputMatchesSchema`
+
+artifact の payload が、タスク定義の `OutputSchema` を満たすことを検証します（`ClaudeValidateArtifact` のアサーション版）。
+
+**シグネチャ**
+```
+AssertTaskOutputMatchesSchema[artifact_Association, outputSchema_List]
+```
+
+**例**
+```wolfram
+AssertTaskOutputMatchesSchema[artifact, {"Summary", "Body"}]
+(* True — payload に "Summary" と "Body" キーが存在する場合 *)
+```
+
+---
+
+### `AssertArtifactHasSchemaWarnings`
+
+artifact に `"SchemaWarnings"` キーが存在することを検証します。スキーマ不整合の検出テストに使用します。
+
+**シグネチャ**
+```
+AssertArtifactHasSchemaWarnings[artifact_Association]
+```
+
+**例**
+```wolfram
+AssertArtifactHasSchemaWarnings[artifact]
+(* True — artifact["SchemaWarnings"] が存在する場合 *)
+```
+
+---
+
+## ClaudeOrchestrator 用アサーション一覧
+
+| 関数 | 目的 |
+|------|------|
+| `AssertNoWorkerNotebookMutation[result]` | worker がノートブックを直接書き込んでいないことを確認 |
+| `AssertArtifactsRespectDependencies[result, spec]` | DependsOn の順序で artifact が生成されたことを確認 |
+| `AssertSingleCommitterWrites[result]` | 書き込み proposal が committer のみから来ることを確認 |
+| `AssertReducerDeterministic[reducer, artifacts]` | reducer が決定論的であることを確認 |
+| `AssertNoCrossWorkerStateAssumption[result]` | worker 間のステート参照がないことを確認 |
+| `AssertTaskOutputMatchesSchema[artifact, schema]` | artifact payload がスキーマを満たすことを確認 |
+| `AssertArtifactHasSchemaWarnings[artifact]` | SchemaWarnings キーが存在することを確認 |
+
+---
+
+## スライドテスト (Phase 33)
+
+ClaudeOrchestrator のスライド生成フロー（Phase 33）に対応するテスト関数群です。Committer の fallback 動作、コンテンツベースのスライド検出、スタイルサニタイズ・intent 検出をそれぞれ独立して検証できます。
+
+---
+
+### T05: Committer fallback テスト
+
+#### `RunT05CommitFallbackTests`
+
+Committer の LLM プロンプト生成・fallback ロジックを単体テストし、PASS/FAIL サマリを返します。対象は `iExtractSlidesFromPayload` / `iCellFromSlideItem` / `iBuildCommitterHint` / `iDeterministicSlideCommit`（guard）です。
+
+```wolfram
+RunT05CommitFallbackTests[]
+```
+
+#### `AssertT05SlideExtraction`
+
+`iExtractSlidesFromPayload` が代表的な 5 ケース（`Slides` キー・`Sections` キー・reducer ネストリスト・単一スライド Association・fallback generic）で封じたスライドリストを返すことを検証します。
+
+#### `AssertT05CellFromItem`
+
+`iCellFromSlideItem` が Title / Body / Code を持つ item を 3 個の `Cell[_, _]`（Title / Text / Input）に展開すること、また空 Association を 1 Cell に fallback することを検証します。
+
+#### `AssertT05CommitHintStructure`
+
+`iBuildCommitterHint` が「COMMITTER ROLE」・「NotebookWrite[EvaluationNotebook[], Cell[...]]」・「ReducedArtifact.Payload」の 3 つのマーカーをすべて含むプロンプト的なテキストを返すことを検証します。
+
+#### `AssertT05FallbackGuards`
+
+`iDeterministicSlideCommit` が正しくガードすることを検証します。NotebookObject 以外では `Status == "NotANotebook"`、空 payload では `Status == "NoSlides"`、不正引数では `Status == "Failed"` となることを確認します。
+
+---
+
+### T06: コンテンツベースのスライド検出テスト
+
+#### `RunT06SlideContentTests`
+
+コンテンツベースのスライド検出と SlideDraft / SlideOutline 形式の Cell 展開を単体テストします。
+
+#### `AssertT06ContentBasedDetection`
+
+`iExtractSlidesFromPayload` が `SlideOutline` / `SlideDraft` キー（T05 では拾えなかったもの）や、全く無関係なキー名でも slide-like なリストを正しく拾うことを検証します。
+
+#### `AssertT06SlideDraftExpansion`
+
+`iCellFromSlideItem` が SlideDraft 形式（`item["Cells"] = {<|"Style"->..., "Content"->...|>, ...}`）を内部 Cell リストにそのまま展開することを検証します。
+
+#### `AssertT06SlideOutlineExpansion`
+
+`iCellFromSlideItem` が SlideOutline 形式（Title + Subtitle + BodyOutline）を適切なスタイルの Cell に展開することを検証します。
+
+---
+
+### T07: スライド intent 検出・スタイルサニタイズテスト
+
+#### `RunT07SlideIntentTests`
+
+スライド intent 検出とスタイルサニタイズの単体テストを実行します。
+
+#### `AssertT07StyleSanitization`
+
+`iSanitizeCellStyle` が (a) 有効なスタイルはそのまま返す、(b) `"Subsection (title slide)"` は `"Subsection"` に落とす、(c) `"Subsection + Item/Subitem 群"` は `"Subsection"` に落とす、(d) 完全に不明なものは `"Text"` に落とす、ことを検証します。
+
+#### `AssertT07SlideIntentDetection`
+
+`iDetectSlideIntent` が (a) 「30 ページのスライド」を `IsSlide=True, PageCount=30` と認識、(b) 「10-page presentation」を `IsSlide=True, PageCount=10` と認識、(c) 全角数字「３０ページ」も 30 と認識、(d) スライド無関係の入力は `IsSlide=False`、となることを検証します。
+
+#### `AssertT07InnerCellFromSpecSanitize`
+
+`iInnerCellFromSpec` が Style が冗長（`"Subsection (title slide)"` 等）な場合に必ず有効な Mathematica cell style 名称に落とすことを検証します。
+
+#### `AssertT07DefaultPlannerSlideAware`
+
+`iDefaultPlanner` が入力に「30 ページのスライド」等が含まれる場合、単一 Explore ではなく Explore + Draft の 2 タスク分解を返し、Draft の `OutputSchema` に `"SlideDraft"` を含むことを検証します。
+
+#### `AssertT07WorkerPromptSlideHint`
+
+`iWorkerBuildSystemPrompt` がスライド必合いのタスク（Goal/Schema に slide / SlideDraft を含む）に対して `"T07 SLIDE-MODE"` 印字を含む拡張 prompt を返すことを検証します。
+
+#### `AssertT07bResolveTargetNotebookLogic`
+
+`iResolveTargetNotebook` が (a) スライド意図ありの入力で `Intent.IsSlide=True` を返す、(b) スライド無関係の入力で `Intent.IsSlide=False` を返す、ことを軸に検証します。`CreateDocument` は実ノートブックが必要なため、ヘッドレスになると `None` に fallback するケースはここでは検証しません。
+
+---
+
 ## 典型的なテストワークフロー
 
 以下に、一連のテストを記述する代表的なパターンを示します。
@@ -356,6 +747,47 @@ result["Trace"]    (* 詳細 trace *)
 
 ---
 
+## ClaudeOrchestrator 典型的なテストワークフロー
+
+```wolfram
+(* 1. Planner を用意する *)
+planner = CreateMockPlanner[<|
+  "Tasks" -> {
+    <|"TaskId" -> "t1", "Role" -> "Explore",
+      "Goal"   -> "ノートブック構造を調べる",
+      "OutputSchema" -> {"Summary"}, "DependsOn" -> {}|>,
+    <|"TaskId" -> "t2", "Role" -> "Draft",
+      "Goal"   -> "レポートを書く",
+      "OutputSchema" -> {"Body"}, "DependsOn" -> {"t1"}|>
+  }
+|>];
+
+(* 2. Reducer・Committer を用意する *)
+reducer   = CreateMockReducer[<|"Body" -> "統合コンテンツ"|>];
+
+(* 3. オーケストレーションシナリオを実行する *)
+result = RunClaudeOrchestrationScenario[<|
+  "Planner"              -> planner,
+  "WorkerAdapterBuilder" -> Function[{role, task, deps},
+    CreateMockWorkerAdapter[role, task, deps,
+      "ArtifactPayload" -> <|"Summary" -> "調査完了", "Body" -> "内容"|>]],
+  "Reducer"              -> reducer,
+  "CommitterAdapterBuilder" -> Function[{nb, art}, CreateMockCommitter[nb, art]],
+  "Input"                -> "レポートを作成してください",
+  "TargetNotebook"       -> None,
+  "Assertions"           -> {
+    AssertNoWorkerNotebookMutation[#] &,
+    AssertSingleCommitterWrites[#] &,
+    AssertArtifactsRespectDependencies[#, planner] &
+  }
+|>];
+
+(* 4. 結果を確認する *)
+result["Passed"]
+```
+
+---
+
 ## 組み込みテストの実行
 
 パッケージに付属する標準シナリオをすべて実行するには、以下のように呼び出します。
@@ -378,6 +810,8 @@ Normal[allResults[Select[Not[#Passed] &], "Name"]]
 
 ## アサーション関数一覧
 
+### ClaudeRuntime 用
+
 | 関数 | 目的 |
 |------|------|
 | `AssertNoSecretLeak[trace, secrets]` | 秘密文字列の漏洩がないことを確認 |
@@ -386,9 +820,22 @@ Normal[allResults[Select[Not[#Passed] &], "Name"]]
 | `AssertBudgetNotExceeded[state]` | budget 超過がないことを確認 |
 | `AssertEventSequence[trace, types]` | イベント型の出現順序を確認 |
 
+### ClaudeOrchestrator 用
+
+| 関数 | 目的 |
+|------|------|
+| `AssertNoWorkerNotebookMutation[result]` | worker がノートブックを直接書き込んでいないことを確認 |
+| `AssertArtifactsRespectDependencies[result, spec]` | DependsOn の順序で artifact が生成されたことを確認 |
+| `AssertSingleCommitterWrites[result]` | 書き込み proposal が committer のみから来ることを確認 |
+| `AssertReducerDeterministic[reducer, artifacts]` | reducer が決定論的であることを確認 |
+| `AssertNoCrossWorkerStateAssumption[result]` | worker 間のステート参照がないことを確認 |
+| `AssertTaskOutputMatchesSchema[artifact, schema]` | artifact payload がスキーマを満たすことを確認 |
+| `AssertArtifactHasSchemaWarnings[artifact]` | SchemaWarnings キーが存在することを確認 |
+
 ---
 
 ## 関連パッケージ
 
 - [ClaudeRuntime](https://github.com/transreal/ClaudeRuntime) — テスト対象のランタイム本体
+- [ClaudeOrchestrator](https://github.com/transreal/ClaudeOrchestrator) — マルチエージェント実行フレームワーク（テスト対象）
 - [NBAccess](https://github.com/transreal/NBAccess) — ノートブックアクセス API
