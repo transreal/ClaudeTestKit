@@ -274,6 +274,67 @@ AssertT07bResolveTargetNotebookLogic::usage =
   "\:3053\:3068\:3092\:8ef8\:306b\:691c\:8a3c\:3059\:308b\:3002 CreateDocument \:306f\:5b9f notebook \:304c\:5fc5\:8981\:306a\:305f\:3081\n" <>
   "\:5b9f\:884c\:30d1\:30b9\:306f\:30d8\:30c3\:30c9\:30ec\:30b9\:306b\:306a\:308b\:3068 None \:306b fallback \:3059\:308b\:30b1\:30fc\:30b9\:306f\:3053\:3053\:3067\:306f\:691c\:8a3c\:3057\:306a\:3044\:3002";
 
+(* \:2500\:2500 Phase 32 Task 3.1: Committer \:81ea\:7136\:8a00\:8a9e Input \:6d41\:5165\:9632\:6b62 \:30c6\:30b9\:30c8 \:2500\:2500 *)
+
+RunPhase32Task31Tests::usage =
+  "RunPhase32Task31Tests[] \:306f Phase 32 Task 3.1 (Committer \:304c\n" <>
+  "Cell[\"\:81ea\:7136\:8a00\:8a9e\", \"Input\"] \:3092\:66f8\:304d\:8fbc\:3080\:308f\:306a\:3044) \:306e\n" <>
+  "\:5358\:4f53\:30c6\:30b9\:30c8\:3092\:5b9f\:884c\:3057\:3001PASS/FAIL \:30b5\:30de\:30ea\:3092\:8fd4\:3059\:3002\n" <>
+  "\:5bfe\:8c61: iValidateWorkerProposal (role=\"Commit\") +\n" <>
+  "        iIsPlausibleInputCellContent + iHeldExprInputCellStrings\:3002";
+
+AssertPhase32Task31RejectsNaturalLangInput::usage =
+  "AssertPhase32Task31RejectsNaturalLangInput[] \:306f iValidateWorkerProposal \:306b\n" <>
+  "HoldComplete[NotebookWrite[nb, Cell[\"\:65e5\:672c\:8a9e\:6587\", \"Input\"]]] \:3092 role=\"Commit\" \:3067\n" <>
+  "\:6295\:5165\:3057\:3001Decision == \"Deny\" \:304b\:3064 ReasonClass == \"NaturalLanguageInInputCell\" \:304c\n" <>
+  "\:8fd4\:308b\:3053\:3068\:3092\:691c\:8a3c\:3002OffendingStrings \:304c\:7a7a\:3067\:306a\:3044\:3053\:3068\:3082\:691c\:3002";
+
+AssertPhase32Task31AcceptsMathExprInInputCell::usage =
+  "AssertPhase32Task31AcceptsMathExprInInputCell[] \:306f iValidateWorkerProposal \:306b\n" <>
+  "HoldComplete[NotebookWrite[nb, Cell[\"Plot[Sin[x], {x, 0, 2 Pi}]\", \"Input\"]]] \:3092\n" <>
+  "role=\"Commit\" \:3067\:6295\:5165\:3057\:3001Decision == \"Permit\" \:304b\:3064 ReasonClass == \"OK\" \:304c\n" <>
+  "\:8fd4\:308b\:3053\:3068\:3092\:691c\:8a3c\:3002";
+
+AssertPhase32Task31AcceptsNaturalLangInTextCell::usage =
+  "AssertPhase32Task31AcceptsNaturalLangInTextCell[] \:306f iValidateWorkerProposal \:306b\n" <>
+  "HoldComplete[NotebookWrite[nb, Cell[\"\:65e5\:672c\:8a9e\:6587\", \"Text\"]]] \:3092 role=\"Commit\" \:3067\n" <>
+  "\:6295\:5165\:3057\:3001Decision == \"Permit\" \:304c\:8fd4\:308b\:3053\:3068\:3092\:691c\:8a3c (\"Text\" \:306f\:691c\:67fb\:5bfe\:8c61\:5916)\:3002";
+
+(* \:2500\:2500 Phase 32 Task 3.2: Auto \:30b2\:30fc\:30c8\:5f37\:5316 \:30c6\:30b9\:30c8 \:2500\:2500 *)
+
+RunPhase32Task32Tests::usage =
+  "RunPhase32Task32Tests[] \:306f Phase 32 Task 3.2 (Auto \:30e2\:30fc\:30c9\:3067\:77ed\:3044 factual\n" <>
+  "query \:3092 Single \:306b\:30d5\:30a9\:30fc\:30eb\:30d0\:30c3\:30af\:3001\:8907\:96d1\:30bf\:30b9\:30af\:306f Orchestrator \:306b\:901a\:3059) \:306e\n" <>
+  "\:5358\:4f53\:30c6\:30b9\:30c8\:3092\:5b9f\:884c\:3057\:3001PASS/FAIL \:30b5\:30de\:30ea\:3092\:8fd4\:3059\:3002\n" <>
+  "\:5bfe\:8c61: iIsShortFactualQuery + iHasComplexTaskMarker\:3002";
+
+AssertPhase32Task32SkipsShortFactualJa::usage =
+  "AssertPhase32Task32SkipsShortFactualJa[] \:306f\:3001\:5143\:4e8b\:4f8b\:306e\:77ed\:3044\:65e5\:672c\:8a9e factual\n" <>
+  "query (\"$packageDirectory\:306eclaudecode\:2026\:3092\:8abf\:3079\:3066\") \:306b\:5bfe\:3057\n" <>
+  "iIsShortFactualQuery \:304c True\:3001iHasComplexTaskMarker \:304c False \:3092\n" <>
+  "\:8fd4\:3059\:3053\:3068\:3092\:691c\:8a3c\:3002";
+
+AssertPhase32Task32SkipsShortFactualEn::usage =
+  "AssertPhase32Task32SkipsShortFactualEn[] \:306f\:3001\:77ed\:3044\:82f1\:8a9e factual query\n" <>
+  "(\"Check if claudecode.wl is newer than its GitHub version\") \:306b\:5bfe\:3057\n" <>
+  "iIsShortFactualQuery \:304c True \:3092\:8fd4\:3059\:3053\:3068\:3092\:691c\:8a3c\:3002";
+
+AssertPhase32Task32KeepsLongComplex::usage =
+  "AssertPhase32Task32KeepsLongComplex[] \:306f\:3001\:9577\:3044\:30de\:30eb\:30c1\:30b9\:30c6\:30c3\:30d7\:30bf\:30b9\:30af\n" <>
+  "(600 \:6587\:5b57\:304b\:3064\:8907\:6570\:306e\:9806\:5e8f\:63a5\:7d9a\:8a9e\:542b\:3080) \:306b\:5bfe\:3057\n" <>
+  "iHasComplexTaskMarker \:304c True\:3001iIsShortFactualQuery \:304c False \:3092\n" <>
+  "\:8fd4\:3057\:3001Orchestrator \:7d4c\:8def\:3092\:7dad\:6301\:3059\:308b\:3053\:3068\:3092\:691c\:8a3c\:3002";
+
+AssertPhase32Task32KeepsSlideRequest::usage =
+  "AssertPhase32Task32KeepsSlideRequest[] \:306f\:3001\:30b9\:30e9\:30a4\:30c9\:30fb\:30ec\:30dd\:30fc\:30c8\:7b49\n" <>
+  "\:306e\:6210\:679c\:7269\:8981\:6c42 (\"30\:30da\:30fc\:30b8\:306e\:30b9\:30e9\:30a4\:30c9\:3092\:4f5c\:3063\:3066\") \:306b\:5bfe\:3057\n" <>
+  "iHasComplexTaskMarker \:304c True \:3092\:8fd4\:3059\:3053\:3068\:3092\:691c\:8a3c\:3002";
+
+AssertPhase32Task32KeepsSequentialTask::usage =
+  "AssertPhase32Task32KeepsSequentialTask[] \:306f\:3001\:9806\:5e8f\:63a5\:7d9a\:8a9e\:304c 2 \:500b\:4ee5\:4e0a\n" <>
+  "(\:300c\:307e\:305a\:2026\:6b21\:306b\:2026\:6700\:5f8c\:306b\:2026\:300d) \:3042\:308b\:30bf\:30b9\:30af\:304c\n" <>
+  "iHasComplexTaskMarker \:304c True \:3092\:8fd4\:3059\:3053\:3068\:3092\:691c\:8a3c\:3002";
+
 Begin["`Private`"];
 
 (* ── iL: $Language に基づく日英切替 ── *)
@@ -2713,6 +2774,433 @@ RunT07SlideIntentTests[] :=
       "Total"   -> Length[results],
       "Results" -> results|>
   ];
+
+(* \:2500\:2500\:2500 Phase 32 Task 3.1: Committer \:81ea\:7136\:8a00\:8a9e Input \:6d41\:5165\:9632\:6b62 \:30c6\:30b9\:30c8 \:2500\:2500\:2500
+
+   \:80cc\:666f:
+     ClaudeEval \:3092 Auto \:30e2\:30fc\:30c9\:3067\:547c\:3093\:3060\:3068\:304d\:3001Committer LLM \:304c
+     NotebookWrite[nb, Cell["\:6b21\:306b\:3001GitHub...", "Input"]] \:306e\:5f62\:3067
+     \:81ea\:7136\:8a00\:8a9e\:3092 Input \:30bb\:30eb\:306b\:66f8\:304d\:8fbc\:3080\:30d0\:30b0\:304c\:89b3\:5bdf\:3055\:308c\:305f\:3002
+     Mathematica \:306f Input \:30bb\:30eb\:5185\:306e\:65e5\:672c\:8a9e\:30b7\:30f3\:30dc\:30eb\:3092
+     Times[_Symbol, _Symbol, ...] \:3068\:3057\:3066 Orderless \:8a55\:4fa1\:3057\:3001\:8f9e\:66f8\:9806
+     \:30bd\:30fc\:30c8\:7d50\:679c\:304c Output \:306b\:51fa\:3066\:3001\:7d00\:3089\:308f\:3057\:3044\:6210\:679c\:7269\:306b\:306a\:308b\:3002
+   
+   \:305d\:3053\:3067 iValidateWorkerProposal (role="Commit") \:3092\:62e1\:5f35\:3057\:3001
+   HeldExpr \:4e2d\:306e Cell[s, "Input", ___] \:306b\:3064\:3044\:3066 s \:304c\:8a55\:4fa1\:53ef\:80fd\:306a
+   Mathematica \:5f0f\:304b\:3092 iIsPlausibleInputCellContent \:3067\:691c\:3081\:3001
+   \:8a55\:4fa1\:4e0d\:80fd\:306a\:3089 Deny \:3059\:308b\:3002
+   \:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500 *)
+
+(* ---- AssertPhase32Task31RejectsNaturalLangInput ---- *)
+
+AssertPhase32Task31RejectsNaturalLangInput[] :=
+  Module[{validateFn, proposal, result, ok = True, fails = {},
+          offending},
+    validateFn = iT05GetPrivate["iValidateWorkerProposal"];
+    If[validateFn === None,
+      Return[<|"Pass" -> False,
+               "Reason" -> "iValidateWorkerProposal not loaded"|>]];
+    
+    (* "\:6b21\:306b\:3001GitHub \:5074\:3092\:8abf\:3079\:307e\:3059" \:306f\:65e5\:672c\:8a9e\:8a08\:753b\:6587\:3002
+       ToExpression \:3067 HoldComplete[Times[_Symbol, _Symbol, ...]] \:306b\:306a\:308b\:3002 *)
+    proposal = <|
+      "HeldExpr" -> HoldComplete[
+        NotebookWrite[EvaluationNotebook[],
+          Cell["\:6b21\:306b\:3001GitHub \:5074\:3092\:8abf\:3079\:307e\:3059", "Input"]]]
+    |>;
+    
+    result = Quiet @ Check[
+      validateFn[proposal, <||>, "Commit"],
+      $Failed];
+    
+    If[!AssociationQ[result],
+      Return[<|"Pass" -> False,
+               "Failures" -> {{"not-an-association", result}}|>]];
+    
+    If[Lookup[result, "Decision", None] =!= "Deny",
+      ok = False;
+      AppendTo[fails, {"wrong-decision",
+        Lookup[result, "Decision", None]}]];
+    
+    If[Lookup[result, "ReasonClass", None] =!= "NaturalLanguageInInputCell",
+      ok = False;
+      AppendTo[fails, {"wrong-reason-class",
+        Lookup[result, "ReasonClass", None]}]];
+    
+    offending = Lookup[result, "OffendingStrings", None];
+    If[!ListQ[offending] || Length[offending] === 0,
+      ok = False;
+      AppendTo[fails, {"empty-offending-strings", offending}]];
+    
+    <|"Pass" -> ok, "Failures" -> fails, "Raw" -> result|>
+  ];
+
+AssertPhase32Task31RejectsNaturalLangInput[_] :=
+  AssertPhase32Task31RejectsNaturalLangInput[];
+
+
+(* ---- AssertPhase32Task31AcceptsMathExprInInputCell ---- *)
+
+AssertPhase32Task31AcceptsMathExprInInputCell[] :=
+  Module[{validateFn, proposal, result, ok = True, fails = {}},
+    validateFn = iT05GetPrivate["iValidateWorkerProposal"];
+    If[validateFn === None,
+      Return[<|"Pass" -> False,
+               "Reason" -> "iValidateWorkerProposal not loaded"|>]];
+    
+    (* \:6b63\:5e38\:306a Mathematica \:5f0f\:3002Plot[Sin[x], {x, 0, 2 Pi}] *)
+    proposal = <|
+      "HeldExpr" -> HoldComplete[
+        NotebookWrite[EvaluationNotebook[],
+          Cell["Plot[Sin[x], {x, 0, 2 Pi}]", "Input"]]]
+    |>;
+    
+    result = Quiet @ Check[
+      validateFn[proposal, <||>, "Commit"],
+      $Failed];
+    
+    If[!AssociationQ[result],
+      Return[<|"Pass" -> False,
+               "Failures" -> {{"not-an-association", result}}|>]];
+    
+    If[Lookup[result, "Decision", None] =!= "Permit",
+      ok = False;
+      AppendTo[fails, {"wrong-decision",
+        Lookup[result, "Decision", None],
+        "reason-class",
+        Lookup[result, "ReasonClass", None]}]];
+    
+    If[Lookup[result, "ReasonClass", None] =!= "OK",
+      ok = False;
+      AppendTo[fails, {"wrong-reason-class",
+        Lookup[result, "ReasonClass", None]}]];
+    
+    <|"Pass" -> ok, "Failures" -> fails, "Raw" -> result|>
+  ];
+
+AssertPhase32Task31AcceptsMathExprInInputCell[_] :=
+  AssertPhase32Task31AcceptsMathExprInInputCell[];
+
+
+(* ---- AssertPhase32Task31AcceptsNaturalLangInTextCell ---- *)
+
+AssertPhase32Task31AcceptsNaturalLangInTextCell[] :=
+  Module[{validateFn, proposal, result, ok = True, fails = {}},
+    validateFn = iT05GetPrivate["iValidateWorkerProposal"];
+    If[validateFn === None,
+      Return[<|"Pass" -> False,
+               "Reason" -> "iValidateWorkerProposal not loaded"|>]];
+    
+    (* \:81ea\:7136\:8a00\:8a9e\:3060\:304c "Text" \:30b9\:30bf\:30a4\:30eb\:3002\:3053\:308c\:306f\:691c\:67fb\:5bfe\:8c61\:5916\:3002 *)
+    proposal = <|
+      "HeldExpr" -> HoldComplete[
+        NotebookWrite[EvaluationNotebook[],
+          Cell["\:6b21\:306b\:3001GitHub \:5074\:3092\:8abf\:3079\:307e\:3059", "Text"]]]
+    |>;
+    
+    result = Quiet @ Check[
+      validateFn[proposal, <||>, "Commit"],
+      $Failed];
+    
+    If[!AssociationQ[result],
+      Return[<|"Pass" -> False,
+               "Failures" -> {{"not-an-association", result}}|>]];
+    
+    If[Lookup[result, "Decision", None] =!= "Permit",
+      ok = False;
+      AppendTo[fails, {"wrong-decision",
+        Lookup[result, "Decision", None],
+        "reason-class",
+        Lookup[result, "ReasonClass", None]}]];
+    
+    <|"Pass" -> ok, "Failures" -> fails, "Raw" -> result|>
+  ];
+
+AssertPhase32Task31AcceptsNaturalLangInTextCell[_] :=
+  AssertPhase32Task31AcceptsNaturalLangInTextCell[];
+
+
+(* ---- RunPhase32Task31Tests ---- *)
+
+RunPhase32Task31Tests[] :=
+  Module[{tests, results, passed, failed},
+    tests = <|
+      "RejectsNaturalLangInput"      -> AssertPhase32Task31RejectsNaturalLangInput,
+      "AcceptsMathExprInInputCell"   -> AssertPhase32Task31AcceptsMathExprInInputCell,
+      "AcceptsNaturalLangInTextCell" -> AssertPhase32Task31AcceptsNaturalLangInTextCell|>;
+    
+    results = KeyValueMap[
+      Function[{name, fn},
+        Module[{r},
+          r = Quiet @ Check[fn[],
+            <|"Pass" -> False, "Error" -> "Threw"|>];
+          name -> r]],
+      tests];
+    results = Association @@ results;
+    
+    passed = Count[Values[results],
+      r_?AssociationQ /; TrueQ[Lookup[r, "Pass", False]]];
+    failed = Length[results] - passed;
+    
+    Print[Style[
+      "Phase 32 Task 3.1 Tests (Committer natural-language Input guard): " <>
+        ToString[passed] <> "/" <> ToString[Length[results]] <>
+        " passed" <> If[failed > 0,
+          " (" <> ToString[failed] <> " failed)", ""],
+      If[failed > 0, RGBColor[0.8, 0.3, 0.2],
+        RGBColor[0, 2/3, 0]],
+      Bold]];
+    
+    KeyValueMap[
+      Function[{name, r},
+        Module[{pass},
+          pass = TrueQ[Lookup[r, "Pass", False]];
+          Print["  ", pass, " \[LongDash] ", name, ": ",
+            Style[If[pass, "PASS",
+              "FAIL " <> ToString[Short[r, 3], InputForm]],
+              If[pass, RGBColor[0, 2/3, 0],
+                RGBColor[0.8, 0.3, 0.2]]]]]],
+      results];
+    
+    <|"Passed"  -> passed,
+      "Failed"  -> failed,
+      "Total"   -> Length[results],
+      "Results" -> results|>
+  ];
+
+
+(* \:2500\:2500\:2500 Phase 32 Task 3.2: Auto \:30b2\:30fc\:30c8\:5f37\:5316 \:30c6\:30b9\:30c8 \:2500\:2500\:2500
+
+   \:80cc\:666f:
+     Task 3.1 \:3067 Committer \:306e\:81ea\:7136\:8a00\:8a9e Input \:6d41\:5165\:306f\:9632\:3054\:305f\:304c\:3001
+     \:4f9d\:7136\:3068\:3057\:3066\:77ed\:3044 factual query (\:4f8b: "\:2026GitHub \:3088\:308a\:65b0\:3057\:3044\:304b\:8abf\:3079\:3066")
+     \:306f Orchestrator \:7d4c\:8def\:306b\:4e57\:3063\:3066 Worker \:304c GitHub API \:3092\:547c\:3079\:305a
+     \:30bf\:30b9\:30af\:304c\:5b8c\:9042\:3057\:306a\:3044\:3002
+     Task 3.2 \:306f\:77ed factual query \:3092 Orchestrator \:7d4c\:8def\:3092\:8df3\:3070\:3057\:3066
+     Single \:30d1\:30b9 (claudecode.wl \:5f93\:6765\:5b9f\:88c5) \:306b\:843d\:3068\:3059\:3002
+   
+   \:5bfe\:8c61: iIsShortFactualQuery[s] + iHasComplexTaskMarker[s]
+     \:524d\:8005\:306f\:300c\:77ed\:3044\:30fb\:8abf\:67fb\:30fb\:30d5\:30a1\:30a4\:30eb\:30fb\:30d1\:30c3\:30b1\:30fc\:30b8\:540d\:300d\:5229\:30fb\:5411\:3051\:306b True\:3002
+     \:5f8c\:8005\:306f\:300c\:30b9\:30e9\:30a4\:30c9\:30fb\:30ec\:30dd\:30fc\:30c8\:30fb\:9806\:5e8f\:63a5\:7d9a\:8a9e\:300d\:306a\:3069\:8907\:96d1\:30bf\:30b9\:30af\:306b True\:3002
+   \:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500\:2500 *)
+
+(* ---- AssertPhase32Task32SkipsShortFactualJa ---- *)
+
+AssertPhase32Task32SkipsShortFactualJa[] :=
+  Module[{isShortFn, isComplexFn, query, resShort, resComplex,
+          ok = True, fails = {}},
+    isShortFn   = iT05GetPrivate["iIsShortFactualQuery"];
+    isComplexFn = iT05GetPrivate["iHasComplexTaskMarker"];
+    If[isShortFn === None || isComplexFn === None,
+      Return[<|"Pass" -> False,
+               "Reason" -> "iIsShortFactualQuery / iHasComplexTaskMarker not loaded"|>]];
+    
+    (* \:5143\:4e8b\:4f8b: result3.nb \:3067\:89b3\:5bdf\:3055\:308c\:305f\:30d7\:30ed\:30f3\:30d7\:30c8 *)
+    query = "$packageDirectory\:306eclaudecode, ClaudeRuntime, documentation\:304c\:3001GitHub\:30ea\:30dd\:30b8\:30c8\:30ea\:306e\:30d0\:30fc\:30b8\:30e7\:30f3\:3088\:308a\:65b0\:3057\:3044\:304b\:3069\:3046\:304b\:3092\:8abf\:3079\:3066";
+    
+    resShort   = Quiet @ Check[isShortFn[query], $Failed];
+    resComplex = Quiet @ Check[isComplexFn[query], $Failed];
+    
+    If[!TrueQ[resShort],
+      ok = False;
+      AppendTo[fails, {"not-short-factual", resShort}]];
+    
+    If[TrueQ[resComplex],
+      ok = False;
+      AppendTo[fails, {"unexpectedly-complex", resComplex}]];
+    
+    <|"Pass" -> ok, "Failures" -> fails,
+      "Query" -> query,
+      "IsShortFactual" -> resShort,
+      "IsComplex" -> resComplex|>
+  ];
+
+AssertPhase32Task32SkipsShortFactualJa[_] :=
+  AssertPhase32Task32SkipsShortFactualJa[];
+
+
+(* ---- AssertPhase32Task32SkipsShortFactualEn ---- *)
+
+AssertPhase32Task32SkipsShortFactualEn[] :=
+  Module[{isShortFn, isComplexFn, query, resShort, resComplex,
+          ok = True, fails = {}},
+    isShortFn   = iT05GetPrivate["iIsShortFactualQuery"];
+    isComplexFn = iT05GetPrivate["iHasComplexTaskMarker"];
+    If[isShortFn === None || isComplexFn === None,
+      Return[<|"Pass" -> False,
+               "Reason" -> "iIsShortFactualQuery / iHasComplexTaskMarker not loaded"|>]];
+    
+    query = "Check if claudecode.wl is newer than its GitHub version";
+    
+    resShort   = Quiet @ Check[isShortFn[query], $Failed];
+    resComplex = Quiet @ Check[isComplexFn[query], $Failed];
+    
+    If[!TrueQ[resShort],
+      ok = False;
+      AppendTo[fails, {"not-short-factual", resShort}]];
+    
+    If[TrueQ[resComplex],
+      ok = False;
+      AppendTo[fails, {"unexpectedly-complex", resComplex}]];
+    
+    <|"Pass" -> ok, "Failures" -> fails,
+      "Query" -> query,
+      "IsShortFactual" -> resShort,
+      "IsComplex" -> resComplex|>
+  ];
+
+AssertPhase32Task32SkipsShortFactualEn[_] :=
+  AssertPhase32Task32SkipsShortFactualEn[];
+
+
+(* ---- AssertPhase32Task32KeepsLongComplex ---- *)
+
+AssertPhase32Task32KeepsLongComplex[] :=
+  Module[{isShortFn, isComplexFn, query, resShort, resComplex,
+          ok = True, fails = {}},
+    isShortFn   = iT05GetPrivate["iIsShortFactualQuery"];
+    isComplexFn = iT05GetPrivate["iHasComplexTaskMarker"];
+    If[isShortFn === None || isComplexFn === None,
+      Return[<|"Pass" -> False,
+               "Reason" -> "iIsShortFactualQuery / iHasComplexTaskMarker not loaded"|>]];
+    
+    (* 600 \:6587\:5b57\:8d85\:3001\:9806\:5e8f\:63a5\:7d9a\:8a9e\:8907\:6570\:3001\:660e\:3089\:304b\:306b\:8907\:96d1 *)
+    query = "\:307e\:305a claudecode.wl \:306e\:516c\:958b\:95a2\:6570\:4e00\:89a7\:3092 api.md \:304b\:3089\:62bd\:51fa\:3057\:3001" <>
+      "\:6b21\:306b ClaudeRuntime.wl \:306e\:516c\:958b\:95a2\:6570\:4e00\:89a7\:3082\:540c\:69d8\:306b\:62bd\:51fa\:3057\:3066\:3001" <>
+      "\:305d\:308c\:305e\:308c\:306e\:95a2\:6570\:306e\:4f7f\:7528\:4f8b\:3001\:30aa\:30d7\:30b7\:30e7\:30f3\:3001\:623b\:308a\:5024\:306e\:578b\:3092\:6bd4\:8f03\:3057\:305f" <>
+      "\:8868\:3092\:751f\:6210\:3057\:3066\:3001\:6700\:5f8c\:306b\:5dee\:7570\:70b9\:3092\:307e\:3068\:3081\:305f\:30ec\:30dd\:30fc\:30c8\:3092\:4f5c\:3063\:3066\:304f\:3060\:3055\:3044\:3002" <>
+      "\:30ec\:30dd\:30fc\:30c8\:306f\:30b9\:30e9\:30a4\:30c9\:5f62\:5f0f\:3067\:3001\:5404\:95a2\:6570\:306b\:3064\:304d 1 \:30b9\:30e9\:30a4\:30c9\:3001" <>
+      "\:30b3\:30fc\:30c9\:4f8b\:3068\:89e3\:8aac\:3092\:4e26\:3079\:3066\:3001\:30d1\:30c3\:30b1\:30fc\:30b8\:306b\:307e\:3068\:3081\:3066\:304f\:3060\:3055\:3044\:3002" <>
+      "\:8907\:96d1\:306a\:30bf\:30b9\:30af\:306a\:306e\:3067\:3001\:30b9\:30c6\:30c3\:30d7\:3054\:3068\:306b\:898b\:76f4\:3057\:306a\:304c\:3089" <>
+      "\:9032\:3081\:3066\:304f\:3060\:3055\:3044\:3002\:5168\:4f53\:3068\:3057\:3066\:7d42\:4e86\:5f8c\:306b\:7d71\:5408\:78ba\:8a8d\:3092\:3057\:3066\:4e0b\:3055\:3044\:3002";
+    
+    resShort   = Quiet @ Check[isShortFn[query], $Failed];
+    resComplex = Quiet @ Check[isComplexFn[query], $Failed];
+    
+    If[TrueQ[resShort],
+      ok = False;
+      AppendTo[fails, {"misclassified-as-short-factual", resShort,
+        "length", StringLength[query]}]];
+    
+    If[!TrueQ[resComplex],
+      ok = False;
+      AppendTo[fails, {"not-detected-as-complex", resComplex,
+        "length", StringLength[query]}]];
+    
+    <|"Pass" -> ok, "Failures" -> fails,
+      "QueryLength" -> StringLength[query],
+      "IsShortFactual" -> resShort,
+      "IsComplex" -> resComplex|>
+  ];
+
+AssertPhase32Task32KeepsLongComplex[_] :=
+  AssertPhase32Task32KeepsLongComplex[];
+
+
+(* ---- AssertPhase32Task32KeepsSlideRequest ---- *)
+
+AssertPhase32Task32KeepsSlideRequest[] :=
+  Module[{isComplexFn, query, resComplex, ok = True, fails = {}},
+    isComplexFn = iT05GetPrivate["iHasComplexTaskMarker"];
+    If[isComplexFn === None,
+      Return[<|"Pass" -> False,
+               "Reason" -> "iHasComplexTaskMarker not loaded"|>]];
+    
+    (* \:77ed\:3044\:304c\:300c\:30b9\:30e9\:30a4\:30c9\:300d\:30ad\:30fc\:30ef\:30fc\:30c9\:3067\:8907\:96d1\:5224\:5b9a *)
+    query = "30\:30da\:30fc\:30b8\:306e\:30b9\:30e9\:30a4\:30c9\:3092\:4f5c\:3063\:3066";
+    
+    resComplex = Quiet @ Check[isComplexFn[query], $Failed];
+    
+    If[!TrueQ[resComplex],
+      ok = False;
+      AppendTo[fails, {"slide-request-not-flagged-complex", resComplex}]];
+    
+    <|"Pass" -> ok, "Failures" -> fails,
+      "Query" -> query,
+      "IsComplex" -> resComplex|>
+  ];
+
+AssertPhase32Task32KeepsSlideRequest[_] :=
+  AssertPhase32Task32KeepsSlideRequest[];
+
+
+(* ---- AssertPhase32Task32KeepsSequentialTask ---- *)
+
+AssertPhase32Task32KeepsSequentialTask[] :=
+  Module[{isComplexFn, query, resComplex, ok = True, fails = {}},
+    isComplexFn = iT05GetPrivate["iHasComplexTaskMarker"];
+    If[isComplexFn === None,
+      Return[<|"Pass" -> False,
+               "Reason" -> "iHasComplexTaskMarker not loaded"|>]];
+    
+    (* \:9806\:5e8f\:63a5\:7d9a\:8a9e 3 \:500b \:2192 \:8907\:96d1\:5224\:5b9a *)
+    query = "\:307e\:305a\:30d5\:30a1\:30a4\:30eb\:3092\:30ed\:30fc\:30c9\:3057\:3001\:6b21\:306b\:5185\:5bb9\:3092\:691c\:8a3c\:3057\:3001\:6700\:5f8c\:306b\:30ec\:30dd\:30fc\:30c8\:3092\:4f5c\:308b";
+    
+    resComplex = Quiet @ Check[isComplexFn[query], $Failed];
+    
+    If[!TrueQ[resComplex],
+      ok = False;
+      AppendTo[fails, {"sequential-task-not-flagged-complex", resComplex}]];
+    
+    <|"Pass" -> ok, "Failures" -> fails,
+      "Query" -> query,
+      "IsComplex" -> resComplex|>
+  ];
+
+AssertPhase32Task32KeepsSequentialTask[_] :=
+  AssertPhase32Task32KeepsSequentialTask[];
+
+
+(* ---- RunPhase32Task32Tests ---- *)
+
+RunPhase32Task32Tests[] :=
+  Module[{tests, results, passed, failed},
+    tests = <|
+      "SkipsShortFactualJa"   -> AssertPhase32Task32SkipsShortFactualJa,
+      "SkipsShortFactualEn"   -> AssertPhase32Task32SkipsShortFactualEn,
+      "KeepsLongComplex"      -> AssertPhase32Task32KeepsLongComplex,
+      "KeepsSlideRequest"     -> AssertPhase32Task32KeepsSlideRequest,
+      "KeepsSequentialTask"   -> AssertPhase32Task32KeepsSequentialTask|>;
+    
+    results = KeyValueMap[
+      Function[{name, fn},
+        Module[{r},
+          r = Quiet @ Check[fn[],
+            <|"Pass" -> False, "Error" -> "Threw"|>];
+          name -> r]],
+      tests];
+    results = Association @@ results;
+    
+    passed = Count[Values[results],
+      r_?AssociationQ /; TrueQ[Lookup[r, "Pass", False]]];
+    failed = Length[results] - passed;
+    
+    Print[Style[
+      "Phase 32 Task 3.2 Tests (Auto gate hardening): " <>
+        ToString[passed] <> "/" <> ToString[Length[results]] <>
+        " passed" <> If[failed > 0,
+          " (" <> ToString[failed] <> " failed)", ""],
+      If[failed > 0, RGBColor[0.8, 0.3, 0.2],
+        RGBColor[0, 2/3, 0]],
+      Bold]];
+    
+    KeyValueMap[
+      Function[{name, r},
+        Module[{pass},
+          pass = TrueQ[Lookup[r, "Pass", False]];
+          Print["  ", pass, " \[LongDash] ", name, ": ",
+            Style[If[pass, "PASS",
+              "FAIL " <> ToString[Short[r, 3], InputForm]],
+              If[pass, RGBColor[0, 2/3, 0],
+                RGBColor[0.8, 0.3, 0.2]]]]]],
+      results];
+    
+    <|"Passed"  -> passed,
+      "Failed"  -> failed,
+      "Total"   -> Length[results],
+      "Results" -> results|>
+  ];
+
 
 End[];
 EndPackage[];
