@@ -783,7 +783,7 @@ RunAllClaudeTests[] :=
     Dataset[results]
   ];
 
-$ClaudeTestKitVersion = "2026-04-19T11-cell-string-parse-tests";
+$ClaudeTestKitVersion = "2026-04-30-phase-f-prevalidate-v2";
 
 (* ════════════════════════════════════════════════════════
    8. MockTransactionAdapter (Phase 9)
@@ -856,6 +856,76 @@ CreateMockTransactionAdapter[opts:OptionsPattern[]] :=
             <|"HeldExpr" -> None,
               "TextResponse" -> rawResponse,
               "HasProposal" -> False|>
+          ]
+        ],
+        
+        (* ── PreValidate (Phase F): 空コード/trivial/メタ/Null の早期 rejection ──
+           Phase B-fix7 + Phase F 拡張の挙動を mock 側にも反映:
+             (1) 空 / <10 char → RepairNeeded (EmptyOrTrivialCode)
+             (2) メタ関数呼び出し → Deny (MetaCallProposal)
+             (3) HoldComplete[Null] → RepairNeeded (NullCodeProposal)
+             (4) コメント除去後ほぼ空 → RepairNeeded (NullCodeProposal)
+           実 ClaudeBuildTransactionAdapter と等価な挙動。 *)
+        "PreValidate" -> Function[{proposal, contextPacket},
+          Module[{code, codeTrimmed, codeWithoutComments, heldExpr,
+                  metaCallPattern},
+            If[!AssociationQ[proposal] ||
+               !TrueQ[Lookup[proposal, "HasProposal", False]],
+              Return[None, Module]];
+            code = Lookup[proposal, "RawCode", ""];
+            codeTrimmed = If[StringQ[code], StringTrim[code], ""];
+            heldExpr = Lookup[proposal, "HeldExpr", None];
+            
+            (* (1) 空 / trivial *)
+            If[codeTrimmed === "" || StringLength[codeTrimmed] < 10,
+              Return[<|"Decision"           -> "RepairNeeded",
+                "ReasonClass"        -> "EmptyOrTrivialCode",
+                "VisibleExplanation" ->
+                  "Empty or trivial code (length=" <>
+                  ToString[StringLength[codeTrimmed]] <> ")",
+                "SanitizedExpr"      -> heldExpr,
+                "EmptyCodeDetected"  -> True,
+                "CodeLength"         -> StringLength[codeTrimmed]|>, Module]];
+            
+            (* (2) メタ関数呼び出し *)
+            metaCallPattern = RegularExpression[
+              "\\b(?:ClaudeUpdatePackage|ClaudeUpdatePackageViaRuntime|" <>
+              "ClaudeBuildTransactionAdapter|ClaudeBuildRuntimeAdapter|" <>
+              "ClaudeRunTurn|CreateClaudeRuntime|ClaudeStartRuntime|" <>
+              "ClaudeEval|ClaudeCreatePackage|ContinueUpdate|ContinueEval)\\s*\\["];
+            If[StringQ[code] && StringContainsQ[code, metaCallPattern],
+              Return[<|"Decision"           -> "Deny",
+                "ReasonClass"        -> "MetaCallProposal",
+                "VisibleExplanation" ->
+                  "Meta-function wrapper call detected.",
+                "SanitizedExpr"      -> heldExpr,
+                "MetaCallDetected"   -> True|>, Module]];
+            
+            (* (3) HoldComplete[Null] *)
+            If[heldExpr === HoldComplete[Null],
+              Return[<|"Decision"           -> "RepairNeeded",
+                "ReasonClass"        -> "NullCodeProposal",
+                "VisibleExplanation" ->
+                  "Code evaluates to Null (comments only?).",
+                "SanitizedExpr"      -> heldExpr,
+                "NullCodeDetected"   -> True|>, Module]];
+            
+            (* (4) コメント除去後ほぼ空 *)
+            codeWithoutComments = If[StringQ[code],
+              StringTrim @ StringReplace[code, {
+                RegularExpression["(?s)\\(\\*.*?\\*\\)"] -> "",
+                RegularExpression["[\\s\\n\\r\\t]+"] -> " "}],
+              ""];
+            If[StringLength[codeWithoutComments] < 5,
+              Return[<|"Decision"           -> "RepairNeeded",
+                "ReasonClass"        -> "NullCodeProposal",
+                "VisibleExplanation" ->
+                  "Code block contained only comments and whitespace.",
+                "SanitizedExpr"      -> heldExpr,
+                "NullCodeDetected"   -> True,
+                "CodeAfterCommentStrip" -> codeWithoutComments|>, Module]];
+            
+            None
           ]
         ],
         
